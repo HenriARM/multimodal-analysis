@@ -38,7 +38,7 @@ HIDDEN_SIZE = 256
 EMBEDDING_LENGTH = 50
 GLOVE_PATH = f'./glove/glove.6B.{EMBEDDING_LENGTH}d.txt'
 TWEET_PATH = './trump_tweets.json'
-# TEXT_MAX_LEN = 200
+TEXT_MAX_LEN = 200
 
 parser = argparse.ArgumentParser(description='Model trainer')
 args = parser.parse_args()
@@ -75,8 +75,7 @@ def shuffle_and_split(dataset_size, split):
 def main():
     # Since our dataset is from one file and will be used both for train and test loader,
     # create sampler which manually shuffle and split indices
-    # dataset = TweetDataset(file_path=args.file_path, glove_path=GLOVE_PATH, max_len=MAX_LEN, text_len=TEXT_MAX_LEN)
-    dataset = TweetDataset(file_path=args.file_path, glove_path=GLOVE_PATH, max_len=MAX_LEN)
+    dataset = TweetDataset(file_path=args.file_path, glove_path=GLOVE_PATH, max_len=MAX_LEN, text_len=TEXT_MAX_LEN)
     train_indices, test_indices = shuffle_and_split(
         dataset_size=len(dataset),
         split=TRAIN_TEST_SPLIT)
@@ -121,7 +120,7 @@ def main():
                 torch.set_grad_enabled(False)
 
             # inference
-            for x, y in data_loader:
+            for x, y, texts in data_loader:
                 x = x.to(DEVICE)
                 y = y.to(DEVICE)
                 y_prim = model.forward(x)
@@ -129,7 +128,7 @@ def main():
                 # loss = torch.mean((normalize(y.float()) - normalize(y_prim)) ** 2)
                 loss = torch.mean((y.float() - y_prim) ** 2)
                 metrics_epoch[f'{stage}_loss'].append(loss.cpu().item())  # Tensor(0.1) => 0.1f
-                print(f'batch: epoch-{epoch} {loss.cpu().item()}  y max {y.max()} y_prim max {y_prim.max()}')
+                print(f'batch: epoch-{epoch} {loss.cpu().item()}  y_max: {y.max()} y_prim_max: {y_prim.max()} random_text: {texts[-1]}')
 
                 if data_loader == data_loader_train:
                     loss.backward()
@@ -151,9 +150,8 @@ if __name__ == '__main__':
 
 # TODO: tokenize with Moses Perl https://github.com/moses-smt/mosesdecoder
 
-# TODO: divide into words or smth?
-# TODO: Tokenizer get cleaned texts
 # TODO: change Tokenizer (from nltk.tokenize import sent_tokenize, word_tokenize)
+# TODO: try different tokens
 
 # TODO: add save of model
 # TODO: add accuaracy

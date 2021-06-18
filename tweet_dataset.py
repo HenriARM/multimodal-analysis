@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import string
 import emoji
+import re
 
 import utils
 
@@ -20,10 +21,32 @@ def load_glove(glove_path):
 
 
 def clean_text(s):
-    # tweets don't consist of html tags so no need to remove them
+    # ############# Twitter specific cleaning ############
+    # this tweets don't consist of html tags so no need to remove them
+
+    # remove non-ascii chars
+    s = ''.join(filter(lambda x: x in string.printable, s))
+
+    # remove words with mentions
+    s = re.sub('(@)[A-Za-z0-9]+', ' ', s)
+
+    # remove hashtag sign but keep the text
+    s.replace('#', ' ').replace('_', ' ')
+
+    # remove RT (retweet)
+    s = s.replace('RT', ' ')
+
+    # # remove links
+    s = re.sub(r'(http|www)\S+', ' ', s)
+
+    # change all words to lower case (too many uppercase or alpha words)
+    s = s.lower()
+
+    # ############# Twitter specific cleaning ############
+
     # remove punctuation
     for punc in string.punctuation:
-        s = s.replace(punc, '')
+        s = s.replace(punc, ' ')
 
     # remove stop words
     l = []
@@ -32,22 +55,19 @@ def clean_text(s):
             l.append(word)
     s = ' '.join(l)
 
-    # remove emoji
-    l = []
-    for c in s:
-        if c not in emoji.UNICODE_EMOJI:
-            l.append(c)
-        else:
-            print('True')
-            exit(-3)
-    s = ' '.join(l)
+    # # remove emoji
+    # l = []
+    # for c in s:
+    #     if c not in emoji.UNICODE_EMOJI['en']:
+    #         l.append(c)
+    # s = ''.join(l)
 
+    # TODO: trim spacings
     return s
 
 
 class TweetDataset(Dataset):
-    # def __init__(self, file_path, glove_path, max_len, text_len):
-    def __init__(self, file_path, glove_path, max_len):
+    def __init__(self, file_path, glove_path, max_len, text_len):
         super().__init__()
 
         # Load tweets
@@ -67,13 +87,13 @@ class TweetDataset(Dataset):
         self.word2vec = load_glove(glove_path=glove_path)
 
         # create weights matrix
-        self.weights = np.zeros((len(self.vocabulary), self.word2vec['the'].shape[0]))
+        self.weights = np.zeros((len(self.vocabulary)+1, self.word2vec['the'].shape[0]))
         for word, index in self.vocabulary.items():
             embedding = self.word2vec.get(word)
             if embedding is not None:
                 self.weights[index, :] = embedding
 
-        # self.text_len = text_len
+        self.text_len = text_len
 
     def __len__(self):
         if self.max_len:
@@ -83,13 +103,13 @@ class TweetDataset(Dataset):
     def __getitem__(self, idx):
         text = self.data[idx]['text']
         text = clean_text(text)
+        clean_text_pad = text
         text = self.tokenizer.texts_to_sequences(text)
         # flatten
         text = [i for s in text for i in s]
-        # # pad with zeroes
-        # text = np.asarray(text)
-        # text_cliped = text[:self.text_len].copy()
-        # text_pad = np.zeros(self.text_len)
-        # text_pad[:text_cliped.shape[0]] = text_cliped
-        # return torch.LongTensor(text_pad), torch.LongTensor([self.data[idx]['favorites']])
-        return torch.LongTensor(text), torch.LongTensor([self.data[idx]['favorites']])
+        # pad with zeroes
+        text = np.asarray(text)
+        text_cliped = text[:self.text_len].copy()
+        text_pad = np.zeros(self.text_len)
+        text_pad[:text_cliped.shape[0]] = text_cliped
+        return torch.LongTensor(text_pad), torch.LongTensor([self.data[idx]['favorites']]), clean_text_pad
