@@ -4,6 +4,10 @@ from keras.preprocessing.text import Tokenizer
 import json
 import numpy as np
 import torch
+import string
+import emoji
+
+import utils
 
 
 def load_glove(glove_path):
@@ -15,24 +19,35 @@ def load_glove(glove_path):
     return vectors
 
 
-def clean_text():
-    # TODO: read how to clean tweets (@ retweets ...)
+def clean_text(s):
     # tweets don't consist of html tags so no need to remove them
-    # TODO: clean_text function: ? dict | list of text | one text | -> ?
-    # TODO: 'a'.lower()
-    # TODO: stop words?
-    # str = remove_stopwords(data)
-    # TODO: remove punctuation
-    # data_without_stopwords['clean_review'] = str.replace('[{}]'.format(string.punctuation), ' ')
+    # remove punctuation
+    for punc in string.punctuation:
+        s = s.replace(punc, '')
 
-    #     data['review without stopwords'] = data['review'].apply(
-    #         lambda x: ' '.join([word for word in x.split() if word not in (stopwords)]))
-    #     return data
-    pass
+    # remove stop words
+    l = []
+    for word in s.split():
+        if word not in utils.stopwords:
+            l.append(word)
+    s = ' '.join(l)
+
+    # remove emoji
+    l = []
+    for c in s:
+        if c not in emoji.UNICODE_EMOJI:
+            l.append(c)
+        else:
+            print('True')
+            exit(-3)
+    s = ' '.join(l)
+
+    return s
 
 
 class TweetDataset(Dataset):
-    def __init__(self, file_path, glove_path, max_len, text_len):
+    # def __init__(self, file_path, glove_path, max_len, text_len):
+    def __init__(self, file_path, glove_path, max_len):
         super().__init__()
 
         # Load tweets
@@ -41,10 +56,9 @@ class TweetDataset(Dataset):
         self.max_len = max_len
 
         # create vocabulary
-        # TODO: shouldnt it be created only on train dataset?
         texts = []
         for tweet in self.data:
-            texts.append(tweet['text'])
+            texts.append(clean_text(tweet['text']))
         self.tokenizer = keras.preprocessing.text.Tokenizer(num_words=5000)
         self.tokenizer.fit_on_texts(texts)
         self.vocabulary = self.tokenizer.word_index
@@ -59,7 +73,7 @@ class TweetDataset(Dataset):
             if embedding is not None:
                 self.weights[index, :] = embedding
 
-        self.text_len = text_len
+        # self.text_len = text_len
 
     def __len__(self):
         if self.max_len:
@@ -68,14 +82,14 @@ class TweetDataset(Dataset):
 
     def __getitem__(self, idx):
         text = self.data[idx]['text']
+        text = clean_text(text)
         text = self.tokenizer.texts_to_sequences(text)
         # flatten
         text = [i for s in text for i in s]
-        # pad with zeroes
-        text = np.asarray(text)
-        text_cliped = text[:self.text_len].copy()
-        text_pad = np.zeros(self.text_len)
-        text_pad[:text_cliped.shape[0]] = text_cliped
-        # TODO: Clean text (each sentence)
-        # TODO: Clean text (all text before making vocabulary)
-        return torch.LongTensor(text_pad), torch.LongTensor([self.data[idx]['favorites']])
+        # # pad with zeroes
+        # text = np.asarray(text)
+        # text_cliped = text[:self.text_len].copy()
+        # text_pad = np.zeros(self.text_len)
+        # text_pad[:text_cliped.shape[0]] = text_cliped
+        # return torch.LongTensor(text_pad), torch.LongTensor([self.data[idx]['favorites']])
+        return torch.LongTensor(text), torch.LongTensor([self.data[idx]['favorites']])
