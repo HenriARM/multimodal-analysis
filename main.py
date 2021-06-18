@@ -29,7 +29,7 @@ from tweet_dataset import TweetDataset
 from tweet_model import TweetPredictor
 
 EPOCHS = 100
-MAX_LEN = 100
+MAX_LEN = 10000
 TRAIN_TEST_SPLIT = .2
 LEARNING_RATE = 1e-3
 BATCH_SIZE = 64
@@ -124,17 +124,18 @@ def main():
                 torch.set_grad_enabled(False)
 
             # inference
-            for x, y, texts in data_loader:
+            for x, y, real_len, texts in data_loader:
                 x = x.to(DEVICE)
                 y = y.to(DEVICE)
-                y_prim = model.forward(x)
+                y_prim = model.forward(x, real_len=real_len[:, 0])
                 # loss = torch.mean((normalize(y.float()) - normalize(y_prim)) ** 2)
                 # MSE
-                # loss = torch.mean((y.float() - y_prim) ** 2)
+                loss = torch.mean((y.float() - y_prim) ** 2)
                 # MAE
-                loss = torch.mean(abs(y.float() - y_prim))
+                # loss = torch.mean(abs(y.float() - y_prim))
                 metrics_epoch[f'{stage}_loss'].append(loss.cpu().item())  # Tensor(0.1) => 0.1f
-                print(f'batch: epoch-{epoch} {loss.cpu().item()}  y_max: {y.max()} y_prim_max: {y_prim.max()} random_text: {texts[-1]}')
+                print(
+                    f'batch: epoch-{epoch} {loss.cpu().item()}  y_max: {y.max()} y_prim_max: {y_prim.max()} random_text: {texts[-1]}')
 
                 if data_loader == data_loader_train:
                     loss.backward()
@@ -162,7 +163,7 @@ if __name__ == '__main__':
 # TODO: try different tokens
 
 # TODO: add accuaracy
-# TODO: add metadata (inputs: text, isretweet, deleted, day_of_week, retweet)
+# TODO: add metadata
 # TODO: add Tensorboard
 
 # TODO: netron

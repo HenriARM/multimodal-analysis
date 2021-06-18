@@ -67,6 +67,8 @@ def clean_text(s):
 
     # remove excess spaces in strings
     s = re.sub(' +', ' ', s)
+
+    # TODO: remove new lines and etc.
     return s
 
 
@@ -107,13 +109,17 @@ class TweetDataset(Dataset):
     def __getitem__(self, idx):
         text = self.data[idx]['text']
         text = clean_text(text)
+
         clean_text_pad = text
+
+        # seq -> to idxs
         text = self.tokenizer.texts_to_sequences(text)
         # flatten
         text = [i for s in text for i in s]
+        real_len = min(len(text), self.text_len)
         # pad with zeroes
         text = np.asarray(text)
         text_cliped = text[:self.text_len].copy()
         text_pad = np.zeros(self.text_len)
         text_pad[:text_cliped.shape[0]] = text_cliped
-        return torch.LongTensor(text_pad), torch.LongTensor([self.data[idx]['favorites']]), clean_text_pad
+        return torch.LongTensor(text_pad), torch.LongTensor([self.data[idx]['favorites']]), torch.LongTensor([real_len]), clean_text_pad
