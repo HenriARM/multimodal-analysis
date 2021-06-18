@@ -38,7 +38,7 @@ HIDDEN_SIZE = 256
 EMBEDDING_LENGTH = 50
 GLOVE_PATH = f'./glove/glove.6B.{EMBEDDING_LENGTH}d.txt'
 TWEET_PATH = './trump_tweets.json'
-TEXT_MAX_LEN = 200
+# TEXT_MAX_LEN = 200
 
 parser = argparse.ArgumentParser(description='Model trainer')
 args = parser.parse_args()
@@ -75,7 +75,8 @@ def shuffle_and_split(dataset_size, split):
 def main():
     # Since our dataset is from one file and will be used both for train and test loader,
     # create sampler which manually shuffle and split indices
-    dataset = TweetDataset(file_path=args.file_path, glove_path=GLOVE_PATH, max_len=MAX_LEN, text_len=TEXT_MAX_LEN)
+    # dataset = TweetDataset(file_path=args.file_path, glove_path=GLOVE_PATH, max_len=MAX_LEN, text_len=TEXT_MAX_LEN)
+    dataset = TweetDataset(file_path=args.file_path, glove_path=GLOVE_PATH, max_len=MAX_LEN)
     train_indices, test_indices = shuffle_and_split(
         dataset_size=len(dataset),
         split=TRAIN_TEST_SPLIT)
@@ -126,7 +127,7 @@ def main():
                 y_prim = model.forward(x)
                 # TODO: bad loss
                 # loss = torch.mean((normalize(y.float()) - normalize(y_prim)) ** 2)
-                # loss = torch.mean((y.float() - y_prim) ** 2)
+                loss = torch.mean((y.float() - y_prim) ** 2)
                 metrics_epoch[f'{stage}_loss'].append(loss.cpu().item())  # Tensor(0.1) => 0.1f
                 print(f'batch: epoch-{epoch} {loss.cpu().item()}  y max {y.max()} y_prim max {y_prim.max()}')
 
@@ -148,12 +149,14 @@ def main():
 if __name__ == '__main__':
     main()
 
-# TODO: add accuaracy
+# TODO: tokenize with Moses Perl https://github.com/moses-smt/mosesdecoder
 
+# TODO: divide into words or smth?
 # TODO: Tokenizer get cleaned texts
 # TODO: change Tokenizer (from nltk.tokenize import sent_tokenize, word_tokenize)
 
-# TODO: should we train on shuffled data? since they are on differen timestamp
+# TODO: add save of model
+# TODO: add accuaracy
 # TODO: add metadata later (inputs: text, isretweet, deleted, day_of_week, retweet)
 # TODO: add Tensorboard
 # TODO: torch summary

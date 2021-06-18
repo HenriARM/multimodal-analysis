@@ -16,8 +16,6 @@ import json
 class TweetPredictor(nn.Module):
     def __init__(self, batch_size, output_size, hidden_size, vocab_size, embedding_length, weights):
         """
-        Arguments
-        ---------
         hidden_sie : Size of the hidden_state of the LSTM
         vocab_size : Size of the vocabulary containing unique words
         embedding_length : Embeddding dimension of GloVe word embeddings
