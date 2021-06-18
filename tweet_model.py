@@ -42,14 +42,14 @@ class TweetPredictor(nn.Module):
         """
         x shape (batch_size, num_sequences)
         """
-        batch_size = x.shape[0]
         x = self.word_embeddings(x)
         x = x.permute(1, 0, 2)  # input.size() = (num_sequences, batch_size, embedding_length)
 
-        # TODO: init each time hidden state and cell state?
-        h_0 = Variable(torch.zeros(1, batch_size, self.hidden_size))
-        c_0 = Variable(torch.zeros(1, batch_size, self.hidden_size))
-        output, (final_hidden_state, final_cell_state) = self.lstm(x, (h_0, c_0))
+        # batch_size = x.shape[0]
+        # h_0 = Variable(torch.zeros(1, batch_size, self.hidden_size))
+        # c_0 = Variable(torch.zeros(1, batch_size, self.hidden_size))
+        # output, (final_hidden_state, final_cell_state) = self.lstm(x, (h_0, c_0))
+        output, (final_hidden_state, final_cell_state) = self.lstm(x)
 
         # final_hidden_state.size() = (batch_size, hidden_size) & final_output.size() = (batch_size, output_size)
         out = self.fc(final_hidden_state[-1])
