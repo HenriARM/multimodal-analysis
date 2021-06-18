@@ -40,8 +40,9 @@ class TweetPredictor(nn.Module):
         # Assigning the look-up table to the pre-trained GloVe word embedding.
         self.lstm = nn.LSTM(embedding_length, hidden_size, bidirectional=True, batch_first=True)
         self.fc = nn.Linear(hidden_size, output_size)
-        # input average of cell state, hidden state and output state (each has two values, since bi-directional)
-        self.fc = nn.Linear(hidden_size * 2 * 3, output_size)
+        # input mean, max, first, last output for each sequence of batch.
+        # Since LSTM is bidirectional, output dimensions are 2*hidden_size
+        self.fc = nn.Linear(hidden_size * 4 * 2, output_size)
 
     def forward(self, x, real_len):
         """
@@ -55,7 +56,6 @@ class TweetPredictor(nn.Module):
         # x = torch.nn.utils.rnn.pack_padded_sequence(input=x, lengths=real_len, batch_first=True)
         # x shape (batch_size, num_sequences, embedding_length)
 
-        # batch_size = x.shape[0]
         # h_0 = Variable(torch.zeros(1, batch_size, self.hidden_size))
         # c_0 = Variable(torch.zeros(1, batch_size, self.hidden_size))
         # output, (final_hidden_state, final_cell_state) = self.lstm(x, (h_0, c_0))
@@ -66,16 +66,20 @@ class TweetPredictor(nn.Module):
 
         # TODO: Huber loss
         # TODO: concat multimodal (text props: isretweet, deleted, day_of_week, retweet)
-        # TODO: try state max, mean, first + last in bi-direct case
-
-        # (batch_size, embedding_length, 2 * hidden_size) -> (2 * hidden_size)
-        out = torch.cat((
-            torch.mean(output[-1, :, :], dim=0), # last seq out avg
-            torch.mean(final_hidden_state[1], dim=0),
-            torch.mean(final_hidden_state[0], dim=0),
-            torch.mean(final_cell_state[0], dim=0),
-            torch.mean(final_cell_state[1], dim=0)),
-            dim=0)
+        out = None
+        batch_size = x.shape[0]
+        for b in range(batch_size):
+            seq_out = torch.cat((
+                output[b, 0],
+                output[b, -1],
+                torch.mean(output[b], dim=0),
+                torch.max(output[b], dim=0)[0]
+            ), dim=0)
+            seq_out = seq_out.clone().detach().reshape((1, -1))
+            if out is None:
+                out = seq_out
+            else:
+                out = torch.cat((out, seq_out))
         out = self.fc(out)
         # out = self.fc(final_hidden_state[-1])
         out = nn.ReLU()(out)

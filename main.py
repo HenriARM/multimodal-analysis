@@ -134,8 +134,8 @@ def main():
                 # MAE
                 # loss = torch.mean(abs(y.float() - y_prim))
                 metrics_epoch[f'{stage}_loss'].append(loss.cpu().item())  # Tensor(0.1) => 0.1f
-                print(
-                    f'batch: epoch-{epoch} {loss.cpu().item()}  y_max: {y.max()} y_prim_max: {y_prim.max()} random_text: {texts[-1]}')
+                print(f'batch: epoch-{epoch} {loss.cpu().item()}  y_max: {y.max()} y_prim_max: {y_prim.max()}')
+                print(f'random_text: {texts[-1]} result: {y_prim[-1]} true: {y[-1]} \n')
 
                 if data_loader == data_loader_train:
                     loss.backward()
@@ -156,16 +156,15 @@ def main():
 if __name__ == '__main__':
     main()
 
-# TODO: tokenize with Moses Perl https://github.com/moses-smt/mosesdecoder
-
 # TODO: finish with req.txt
+
+# TODO: tokenize with Moses Perl https://github.com/moses-smt/mosesdecoder
 # TODO: change Tokenizer (from nltk.tokenize import sent_tokenize, word_tokenize)
 # TODO: try different tokens
-
-# TODO: add accuaracy
-# TODO: add metadata
-# TODO: add Tensorboard
-
-# TODO: netron
 # TODO: uninstall tensorflow, keras
 # TODO: uninstall torchnlp
+
+# TODO: add NRMSE / accuaracy metrics
+# TODO: add Tensorboard
+
+
