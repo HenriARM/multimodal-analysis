@@ -49,6 +49,11 @@ class TweetPredictor(nn.Module):
         # output, (final_hidden_state, final_cell_state) = self.lstm(x, (h_0, c_0))
         output, (final_hidden_state, final_cell_state) = self.lstm(x)
 
+        # TODO:
+        # max vai meam hidden state
+        # binary lstm
+        # huber loss
+
         # final_hidden_state.size() = (batch_size, hidden_size) & final_output.size() = (batch_size, output_size)
         out = self.fc(final_hidden_state[-1])
         out = self.relu(out)

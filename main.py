@@ -29,7 +29,7 @@ from tweet_dataset import TweetDataset
 from tweet_model import TweetPredictor
 
 EPOCHS = 100
-MAX_LEN = 10000
+MAX_LEN = 100
 TRAIN_TEST_SPLIT = .2
 LEARNING_RATE = 1e-3
 BATCH_SIZE = 64
@@ -38,6 +38,7 @@ HIDDEN_SIZE = 256
 EMBEDDING_LENGTH = 50
 GLOVE_PATH = f'./glove/glove.6B.{EMBEDDING_LENGTH}d.txt'
 TWEET_PATH = './trump_tweets.json'
+CHECKPOINT_DIR = './last-lstm.pt'
 TEXT_MAX_LEN = 200
 
 parser = argparse.ArgumentParser(description='Model trainer')
@@ -101,6 +102,9 @@ def main():
         vocab_size=len(dataset.vocabulary),
         embedding_length=EMBEDDING_LENGTH,
         weights=torch.FloatTensor(dataset.weights))
+    if os.path.isfile(CHECKPOINT_DIR):
+        print('checkpoint is loaded')
+        model.load_state_dict(torch.load(CHECKPOINT_DIR))
     model = model.to(DEVICE)
     optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
@@ -124,9 +128,11 @@ def main():
                 x = x.to(DEVICE)
                 y = y.to(DEVICE)
                 y_prim = model.forward(x)
-                # TODO: bad loss
                 # loss = torch.mean((normalize(y.float()) - normalize(y_prim)) ** 2)
-                loss = torch.mean((y.float() - y_prim) ** 2)
+                # MSE
+                # loss = torch.mean((y.float() - y_prim) ** 2)
+                # MAE
+                loss = torch.mean(abs(y.float() - y_prim))
                 metrics_epoch[f'{stage}_loss'].append(loss.cpu().item())  # Tensor(0.1) => 0.1f
                 print(f'batch: epoch-{epoch} {loss.cpu().item()}  y_max: {y.max()} y_prim_max: {y_prim.max()} random_text: {texts[-1]}')
 
@@ -143,6 +149,7 @@ def main():
                     metrics_strs.append(f'{key}: {round(value, 2)}')
 
             print(f'epoch: {epoch} {" ".join(metrics_strs)}')
+            torch.save(model.state_dict(), CHECKPOINT_DIR)
 
 
 if __name__ == '__main__':
@@ -150,14 +157,14 @@ if __name__ == '__main__':
 
 # TODO: tokenize with Moses Perl https://github.com/moses-smt/mosesdecoder
 
+# TODO: finish with req.txt
 # TODO: change Tokenizer (from nltk.tokenize import sent_tokenize, word_tokenize)
 # TODO: try different tokens
 
-# TODO: add save of model
 # TODO: add accuaracy
-# TODO: add metadata later (inputs: text, isretweet, deleted, day_of_week, retweet)
+# TODO: add metadata (inputs: text, isretweet, deleted, day_of_week, retweet)
 # TODO: add Tensorboard
-# TODO: torch summary
 
+# TODO: netron
 # TODO: uninstall tensorflow, keras
 # TODO: uninstall torchnlp
